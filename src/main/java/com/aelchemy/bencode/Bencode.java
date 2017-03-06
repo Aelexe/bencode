@@ -23,4 +23,15 @@ public class Bencode {
 		return Decode.decodeString(bData);
 	}
 
+	/**
+	 * Decodes the Bencoded data argument as a number.
+	 * 
+	 * @param bData The Bencoded data containing the number.
+	 * @return The number contained in the Bencoded data argument.
+	 * @throws InvalidFormatException Thrown if the Bencoded data argument is an invalid format.
+	 */
+	public static long decodeNumber(final String bData) throws InvalidFormatException {
+		return Decode.decodeNumber(bData);
+	}
+
 }

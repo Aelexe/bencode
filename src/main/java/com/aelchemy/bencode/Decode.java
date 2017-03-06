@@ -50,4 +50,38 @@ class Decode {
 		return data;
 	}
 
+	/**
+	 * Decodes the Bencoded data argument as a number.
+	 * 
+	 * @param bData The Bencoded data containing the number.
+	 * @return The number contained in the Bencoded data argument.
+	 * @throws InvalidFormatException Thrown if the Bencoded data argument is an invalid format.
+	 */
+	public static long decodeNumber(final String bData) throws InvalidFormatException {
+		// Validate the data isn't empty.
+		if (bData == null || bData.length() < 3) {
+			throw new InvalidFormatException("Data is null or doesn't contain a number: \"" + bData + "\"");
+		}
+
+		// Validate the data starts with i and ends with e.
+		if (!bData.startsWith("i") || !bData.endsWith("e")) {
+			throw new InvalidFormatException("Data does not start with i or end with e: \"" + bData + "\"");
+		}
+
+		// Validate the data doesn't have leading zeros, unless it is zero.
+		if ((bData.startsWith("i0") && !bData.equals("i0e")) || bData.startsWith("i-0")) {
+			throw new InvalidFormatException("Data contains leading zeros: \"" + bData + "\"");
+		}
+
+		// Parse the number.
+		long number;
+		try {
+			number = Long.parseLong(bData.substring(1, bData.length() - 1));
+		} catch (NumberFormatException e) {
+			throw new InvalidFormatException("Data could not be parsed to a long: \"" + bData + "\"");
+		}
+
+		return number;
+	}
+
 }
