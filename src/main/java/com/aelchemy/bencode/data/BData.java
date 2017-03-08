@@ -24,6 +24,14 @@ public abstract class BData {
 		return (BNumber) this;
 	}
 
+	public boolean isList() {
+		return this instanceof BList;
+	}
+
+	public BList getAsList() {
+		return (BList) this;
+	}
+
 	public abstract String encode();
 
 }

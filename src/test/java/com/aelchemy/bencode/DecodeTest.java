@@ -1,10 +1,13 @@
 package com.aelchemy.bencode;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
+import com.aelchemy.bencode.data.BData;
+import com.aelchemy.bencode.data.BList;
 import com.aelchemy.bencode.exception.InvalidFormatException;
 
 /**
@@ -99,6 +102,71 @@ public class DecodeTest {
 			}
 			fail("Expected InvalidFormatException for test data: \"" + bData + "\" but received nothing.");
 		}
+	}
+
+	/**
+	 * Tests {@link Bencode#decodeList} returns the expected {@link BList}s for the provided valid Bencoded lists.
+	 * 
+	 * @throws InvalidFormatException If thrown the test fails.
+	 */
+	@Test
+	public void testDecodeList() throws InvalidFormatException {
+		BList list = Bencode.decodeList("l3:Onei2e5:Threei4e4:Fivee");
+
+		assertEquals(5, list.getData().size());
+		assertBString("One", list.getData().get(0));
+		assertBNumber(2, list.getData().get(1));
+		assertBString("Three", list.getData().get(2));
+		assertBNumber(4, list.getData().get(3));
+		assertBString("Five", list.getData().get(4));
+
+		BList emptyList = Bencode.decodeList("le");
+		assertTrue(emptyList.getData().isEmpty());
+	}
+
+	/**
+	 * Tests {@link Bencode#decodeList} returns the expected {@link BList} for the provided valid Bencoded list with nested lists.
+	 * 
+	 * @throws InvalidFormatException If thrown the test fails.
+	 */
+	@Test
+	public void testDecodeList_NestedLists() throws InvalidFormatException {
+		BList list = Bencode.decodeList("l25:The next value is a list.li1ei3ei5ee57:End of list, next value is the sum of this lists numbers.i9elli1eeli1ei2eeee");
+
+		assertEquals(5, list.getData().size());
+		assertBString("The next value is a list.", list.getData().get(0));
+		assertTrue(list.getData().get(1).isList());
+		assertBString("End of list, next value is the sum of this lists numbers.", list.getData().get(2));
+		assertBNumber(9, list.getData().get(3));
+		assertTrue(list.getData().get(4).isList());
+
+		BList firstList = list.getData().get(1).getAsList();
+		assertEquals(3, firstList.getData().size());
+		assertBNumber(1, firstList.getData().get(0));
+		assertBNumber(3, firstList.getData().get(1));
+		assertBNumber(5, firstList.getData().get(2));
+
+		BList secondList = list.getData().get(4).getAsList();
+		assertEquals(2, secondList.getData().size());
+		assertTrue(secondList.getData().get(0).isList());
+		BList subListOne = secondList.getData().get(0).getAsList();
+		assertEquals(1, subListOne.getData().size());
+		assertBNumber(1, subListOne.getData().get(0));
+		assertTrue(secondList.getData().get(1).isList());
+		BList subListTwo = secondList.getData().get(1).getAsList();
+		assertEquals(2, subListTwo.getData().size());
+		assertBNumber(1, subListTwo.getData().get(0));
+		assertBNumber(2, subListTwo.getData().get(1));
+	}
+
+	private void assertBString(final String expectedValue, final BData bString) {
+		assertTrue(bString.isString());
+		assertEquals(expectedValue, bString.getAsString().getValue());
+	}
+
+	private void assertBNumber(final long expectedValue, final BData bNumber) {
+		assertTrue(bNumber.isNumber());
+		assertEquals(expectedValue, bNumber.getAsNumber().getValue());
 	}
 
 }

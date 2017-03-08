@@ -1,5 +1,6 @@
 package com.aelchemy.bencode;
 
+import com.aelchemy.bencode.data.BList;
 import com.aelchemy.bencode.exception.InvalidFormatException;
 
 /**
@@ -53,6 +54,17 @@ public class Bencode {
 	 */
 	public static String encodeNumber(final long number) {
 		return encodeNumber(number);
+	}
+
+	/**
+	 * Decodes the Bencoded data argument as a list.
+	 * 
+	 * @param bData The Bencoded data containing the list.
+	 * @return The {@link BList} contained in the Bencoded data argument.
+	 * @throws InvalidFormatException Thrown if the Bencoded data argument is an invalid format.
+	 */
+	public static BList decodeList(final String bData) throws InvalidFormatException {
+		return Decode.decodeList(bData);
 	}
 
 }

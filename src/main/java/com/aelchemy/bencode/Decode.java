@@ -1,7 +1,14 @@
 package com.aelchemy.bencode;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.lang3.StringUtils;
 
+import com.aelchemy.bencode.data.BData;
+import com.aelchemy.bencode.data.BList;
+import com.aelchemy.bencode.data.BNumber;
+import com.aelchemy.bencode.data.BString;
 import com.aelchemy.bencode.exception.InvalidFormatException;
 
 /**
@@ -11,6 +18,8 @@ import com.aelchemy.bencode.exception.InvalidFormatException;
  *
  */
 class Decode {
+
+	private static final Pattern LEADING_NUMBER_PATTERN = Pattern.compile("\\d*");
 
 	/**
 	 * Decodes the Bencoded data argument as a string.
@@ -51,6 +60,17 @@ class Decode {
 	}
 
 	/**
+	 * Decodes the Bencoded data argument as a string.
+	 * 
+	 * @param bData The Bencoded data containing the string.
+	 * @return {@link BString} representing the string contained in the Bencoded data argument.
+	 * @throws InvalidFormatException Thrown if the Bencoded data argument is an invalid format.
+	 */
+	public static BString decodeBString(final String bData) throws InvalidFormatException {
+		return new BString(decodeString(bData));
+	}
+
+	/**
 	 * Decodes the Bencoded data argument as a number.
 	 * 
 	 * @param bData The Bencoded data containing the number.
@@ -65,7 +85,7 @@ class Decode {
 
 		// Validate the data starts with i and ends with e.
 		if (!bData.startsWith("i") || !bData.endsWith("e")) {
-			throw new InvalidFormatException("Data does not start with i or end with e: \"" + bData + "\"");
+			throw new InvalidFormatException("Data does not start with i and end with e: \"" + bData + "\"");
 		}
 
 		// Validate the data doesn't have leading zeros, unless it is zero.
@@ -82,6 +102,102 @@ class Decode {
 		}
 
 		return number;
+	}
+
+	/**
+	 * Decodes the Bencoded data argument as a number.
+	 * 
+	 * @param bData The Bencoded data containing the number.
+	 * @return {@link BNumber} representing the number contained in the Bencoded data argument.
+	 * @throws InvalidFormatException Thrown if the Bencoded data argument is an invalid format.
+	 */
+	public static BNumber decodeBNumber(final String bData) throws InvalidFormatException {
+		return new BNumber(decodeNumber(bData));
+	}
+
+	/**
+	 * Decodes the Bencoded data argument as a list.
+	 * 
+	 * @param bData The Bencoded data containing the list.
+	 * @return The list contained in the Bencoded data argument.
+	 * @throws InvalidFormatException Thrown if the Bencoded data argument is an invalid format.
+	 */
+	public static BList decodeList(String bData) throws InvalidFormatException {
+		// Validate the data isn't empty.
+		if (bData == null || bData.length() < 2) {
+			throw new InvalidFormatException("Data is null or doesn't contain a list: \"" + bData + "\"");
+		}
+
+		// Validate the data starts with l and ends with e.
+		if (!bData.startsWith("l") || !bData.endsWith("e")) {
+			throw new InvalidFormatException("Data does not start with l and end with e: \"" + bData + "\"");
+		}
+
+		// Drop the leading l.
+		bData = bData.substring(1);
+
+		// Initialise the list.
+		BList list = new BList();
+
+		// Repeatedly extract and decode each Bencoded value until none are left, signaling the completion of the list parsing.
+		String extract;
+		while ((extract = extractNextBDataString(bData)) != null) {
+			list.addData(decode(extract));
+			bData = bData.substring(bData.indexOf(extract) + extract.length());
+		}
+
+		return list;
+	}
+
+	/**
+	 * Decodes the Bencoded data argument as whatever it represents.
+	 * 
+	 * @param bData The Bencoded data.
+	 * @return {@link BData} containing the Bencoded data.
+	 * @throws InvalidFormatException Thrown if the Bencoded data argument is an invalid format.
+	 */
+	private static BData decode(final String bData) throws InvalidFormatException {
+		if (Character.isDigit(bData.charAt(0))) {
+			return decodeBString(bData);
+		} else if (bData.startsWith("i")) {
+			return decodeBNumber(bData);
+		} else if (bData.startsWith("l")) {
+			return decodeList(bData);
+		}
+
+		throw new InvalidFormatException("Data does contain a valid Bencoded value: \"" + bData + "\"");
+	}
+
+	/**
+	 * Extracts the next Bencoded data string from the Bencoded data argument.
+	 * 
+	 * @param bData The Bencoded data to retrieve the next value from.
+	 * @return A string containing the Bencoded data, or null if one could not be ofund.
+	 */
+	private static String extractNextBDataString(final String bData) {
+		if (Character.isDigit(bData.charAt(0))) {
+			// If the value starts with a number, it's a string.
+			// Use a matcher to extract the length.
+			Matcher leadingNumberMatcher = LEADING_NUMBER_PATTERN.matcher(bData);
+			leadingNumberMatcher.find();
+			String stringLength = leadingNumberMatcher.group(0);
+			// And then use that length to determine how long the string is in the Bencoded data.
+			return bData.substring(0, stringLength.length() + 1 + Integer.valueOf(stringLength));
+		} else if (bData.startsWith("i")) {
+			// If the value starts with i, it's a number.
+			return bData.substring(0, bData.indexOf('e') + 1);
+		} else if (bData.startsWith("l")) {
+			// If the value starts with l, it's a list.
+			// Recursively extract every sub-value in the list
+			int index = 1;
+			String extract;
+			while ((extract = extractNextBDataString(bData.substring(index))) != null) {
+				index = bData.indexOf(extract) + extract.length();
+			}
+			return bData.substring(0, index + 1);
+		}
+
+		return null;
 	}
 
 }
