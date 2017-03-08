@@ -24,6 +24,17 @@ public class Bencode {
 	}
 
 	/**
+	 * Encodes the string argument into a Bencoded string. <br>
+	 * Null will be treated as an empty string.
+	 * 
+	 * @param string The string to encode.
+	 * @return The Bencoded string.
+	 */
+	public static String encodeString(final String string) {
+		return Encode.encodeString(string);
+	}
+
+	/**
 	 * Decodes the Bencoded data argument as a number.
 	 * 
 	 * @param bData The Bencoded data containing the number.
@@ -32,6 +43,16 @@ public class Bencode {
 	 */
 	public static long decodeNumber(final String bData) throws InvalidFormatException {
 		return Decode.decodeNumber(bData);
+	}
+
+	/**
+	 * Encodes the number argument into a Bencoded number.
+	 * 
+	 * @param number The number to encode.
+	 * @return The Bencoded number.
+	 */
+	public static String encodeNumber(final long number) {
+		return encodeNumber(number);
 	}
 
 }
