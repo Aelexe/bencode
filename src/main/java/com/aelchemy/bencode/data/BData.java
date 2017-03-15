@@ -1,37 +1,53 @@
 package com.aelchemy.bencode.data;
 
 /**
- * Abstract {@link BData} represents a Bencode data type.
+ * Abstract {@link BData} is a wrapper for {@link BType}.
  * 
  * @author Aelexe
  *
  */
-public abstract class BData {
+public class BData {
 
-	public boolean isString() {
-		return this instanceof BString;
+	private BType data;
+
+	public BData(BType data) {
+		this.data = data;
 	}
 
-	public BString getAsString() {
-		return (BString) this;
+	public boolean isString() {
+		return data instanceof BString;
+	}
+
+	public BString asString() {
+		return (BString) data;
 	}
 
 	public boolean isNumber() {
-		return this instanceof BNumber;
+		return data instanceof BNumber;
 	}
 
-	public BNumber getAsNumber() {
-		return (BNumber) this;
+	public BNumber asNumber() {
+		return (BNumber) data;
 	}
 
 	public boolean isList() {
-		return this instanceof BList;
+		return data instanceof BList;
 	}
 
-	public BList getAsList() {
-		return (BList) this;
+	public BList asList() {
+		return (BList) data;
 	}
 
-	public abstract String encode();
+	public boolean isDictionary() {
+		return data instanceof BDictionary;
+	}
+
+	public BDictionary asDictionary() {
+		return (BDictionary) data;
+	}
+
+	public String encode() {
+		return data.encode();
+	}
 
 }

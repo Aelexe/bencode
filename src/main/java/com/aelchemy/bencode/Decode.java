@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringUtils;
 
 import com.aelchemy.bencode.data.BData;
+import com.aelchemy.bencode.data.BDictionary;
 import com.aelchemy.bencode.data.BList;
 import com.aelchemy.bencode.data.BNumber;
 import com.aelchemy.bencode.data.BString;
@@ -15,7 +16,7 @@ import com.aelchemy.bencode.exception.InvalidFormatException;
  * Contains methods for the decoding of Bencoded data.
  * 
  * @author Aelexe
- *
+ * 
  */
 class Decode {
 
@@ -142,11 +143,61 @@ class Decode {
 		// Repeatedly extract and decode each Bencoded value until none are left, signaling the completion of the list parsing.
 		String extract;
 		while ((extract = extractNextBDataString(bData)) != null) {
-			list.addData(decode(extract));
-			bData = bData.substring(bData.indexOf(extract) + extract.length());
+			list.add(decode(extract));
+			bData = trimBData(extract, bData);
+		}
+
+		// Validate the last remaining character is the end of the list.
+		if (!bData.equals("e")) {
+			throw new InvalidFormatException("Data does not end with e: \"" + bData + "\"");
 		}
 
 		return list;
+	}
+
+	/**
+	 * Decodes the Bencoded data argument as a dictionary.
+	 * 
+	 * @param bData The Bencoded data containing the dictionary.
+	 * @return The dictionary contained in the Bencoded data argument.
+	 * @throws InvalidFormatException Thrown if the Bencoded data argument is an invalid format.
+	 */
+	public static BDictionary decodeDictionary(String bData) throws InvalidFormatException {
+		// Validate the data isn't empty.
+		if (bData == null || bData.length() < 2) {
+			throw new InvalidFormatException("Data is null or doesn't contain a dictionary: \"" + bData + "\"");
+		}
+
+		// Validate the data starts with d and ends with e.
+		if (!bData.startsWith("d") || !bData.endsWith("e")) {
+			throw new InvalidFormatException("Data does not start with d and end with e: \"" + bData + "\"");
+		}
+
+		// Drop the leading d.
+		bData = bData.substring(1);
+
+		// Initialise the dictionary.
+		BDictionary dictionary = new BDictionary();
+
+		// Repeatedly extract and decode each Bencoded value until none are left, signaling the completion of the list parsing.
+		String keyExtract;
+		while ((keyExtract = extractNextBDataString(bData)) != null) {
+			String key = decodeString(keyExtract);
+			bData = trimBData(keyExtract, bData);
+			String valueExtract = extractNextBDataString(bData);
+			if (valueExtract == null) {
+				throw new InvalidFormatException("Data does not contain a value for key: \"" + key + "\"");
+			}
+			dictionary.put(key, decode(valueExtract));
+			bData = trimBData(valueExtract, bData);
+		}
+
+		// Validate the last remaining character is the end of the dictionary.
+		if (!bData.equals("e")) {
+			throw new InvalidFormatException("Data does not end with e: \"" + bData + "\"");
+		}
+
+		return dictionary;
 	}
 
 	/**
@@ -158,11 +209,11 @@ class Decode {
 	 */
 	private static BData decode(final String bData) throws InvalidFormatException {
 		if (Character.isDigit(bData.charAt(0))) {
-			return decodeBString(bData);
+			return new BData(decodeBString(bData));
 		} else if (bData.startsWith("i")) {
-			return decodeBNumber(bData);
+			return new BData(decodeBNumber(bData));
 		} else if (bData.startsWith("l")) {
-			return decodeList(bData);
+			return new BData(decodeList(bData));
 		}
 
 		throw new InvalidFormatException("Data does contain a valid Bencoded value: \"" + bData + "\"");
@@ -175,29 +226,47 @@ class Decode {
 	 * @return A string containing the Bencoded data, or null if one could not be ofund.
 	 */
 	private static String extractNextBDataString(final String bData) {
-		if (Character.isDigit(bData.charAt(0))) {
-			// If the value starts with a number, it's a string.
-			// Use a matcher to extract the length.
-			Matcher leadingNumberMatcher = LEADING_NUMBER_PATTERN.matcher(bData);
-			leadingNumberMatcher.find();
-			String stringLength = leadingNumberMatcher.group(0);
-			// And then use that length to determine how long the string is in the Bencoded data.
-			return bData.substring(0, stringLength.length() + 1 + Integer.valueOf(stringLength));
-		} else if (bData.startsWith("i")) {
-			// If the value starts with i, it's a number.
-			return bData.substring(0, bData.indexOf('e') + 1);
-		} else if (bData.startsWith("l")) {
-			// If the value starts with l, it's a list.
-			// Recursively extract every sub-value in the list
-			int index = 1;
-			String extract;
-			while ((extract = extractNextBDataString(bData.substring(index))) != null) {
-				index = bData.indexOf(extract) + extract.length();
+		if (StringUtils.isNotEmpty(bData)) {
+			if (Character.isDigit(bData.charAt(0))) {
+				// If the value starts with a number, it's a string.
+				// Use a matcher to extract the length.
+				Matcher leadingNumberMatcher = LEADING_NUMBER_PATTERN.matcher(bData);
+				leadingNumberMatcher.find();
+				String stringLength = leadingNumberMatcher.group(0);
+				// And then use that length to determine how long the string is in the Bencoded data.
+				int totalLength = stringLength.length() + 1 + Integer.valueOf(stringLength);
+				if (bData.length() >= totalLength) {
+					return bData.substring(0, stringLength.length() + 1 + Integer.valueOf(stringLength));
+				} else {
+					return null;
+				}
+			} else if (bData.startsWith("i")) {
+				// If the value starts with i, it's a number.
+				return bData.substring(0, bData.indexOf('e') + 1);
+			} else if (bData.startsWith("l")) {
+				// If the value starts with l, it's a list.
+				// Recursively extract every sub-value in the list
+				int index = 1;
+				String extract;
+				while ((extract = extractNextBDataString(bData.substring(index))) != null) {
+					index = bData.indexOf(extract) + extract.length();
+				}
+				return bData.substring(0, index + 1);
 			}
-			return bData.substring(0, index + 1);
 		}
 
 		return null;
+	}
+
+	/**
+	 * Returns the Bencoded data argument string with the leading trim content removed.
+	 * 
+	 * @param trimContent The content to remove from the start of the Bencoded data.
+	 * @param bData The Bencoded data to trim.
+	 * @return The Bencoded data, less the trim content.
+	 */
+	private static String trimBData(String trimContent, String bData) {
+		return bData.substring(bData.indexOf(trimContent) + trimContent.length());
 	}
 
 }

@@ -1,14 +1,14 @@
 package com.aelchemy.bencode.data;
 
-import com.aelchemy.bencode.Encode;
+import com.aelchemy.bencode.Bencode;
 
 /**
  * {@link BNumber} represents a Bencoded number.
  * 
  * @author Aelexe
- *
+ * 
  */
-public class BNumber extends BData {
+public class BNumber extends BType {
 
 	private long value;
 
@@ -26,7 +26,7 @@ public class BNumber extends BData {
 
 	@Override
 	public String encode() {
-		return Encode.encodeNumber(value);
+		return Bencode.encodeNumber(value);
 	}
 
 }
